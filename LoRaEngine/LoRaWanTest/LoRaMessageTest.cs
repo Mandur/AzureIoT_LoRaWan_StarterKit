@@ -90,6 +90,55 @@ namespace LoRaWanTest
 
         }
 
+        [Fact]
+        public void TestUnconfirmedUplink()
+        {
+            string jsonUplinkUnconfirmedDataUp = @"{ ""rxpk"":[
+               {
+               ""time"":""2013-03-31T16:21:17.528002Z"",
+                ""tmst"":3512348611,
+                ""chan"":2,
+                ""rfch"":0,
+                ""freq"":866.349812,
+                ""stat"":1,
+                ""modu"":""LORA"",
+                ""datr"":""SF7BW125"",
+                ""codr"":""4/6"",
+                ""rssi"":-35,
+                ""lsnr"":5.1,
+                ""size"":32,
+                ""data"":""QAQDAgGAAQABppRkJhXWw7WC""
+                 }]}";
+
+            byte[] physicalUpstreamPyld = new byte[12];
+            physicalUpstreamPyld[0] = 2;
+
+            var jsonUplinkUnconfirmedDataUpBytes = Encoding.Default.GetBytes(jsonUplinkUnconfirmedDataUp);
+            LoRaMessage jsonUplinkUnconfirmedMessage = new LoRaMessage(physicalUpstreamPyld.Concat(jsonUplinkUnconfirmedDataUpBytes).ToArray());
+            Assert.Equal(LoRaMessageType.UnconfirmedDataUp,jsonUplinkUnconfirmedMessage.loRaMessageType);
+       
+            LoRaPayloadUnconfirmedUplink loRaPayloadUplinkObj = (LoRaPayloadUnconfirmedUplink)jsonUplinkUnconfirmedMessage.payloadMessage;
+          
+
+            Assert.True(loRaPayloadUplinkObj.fcnt.SequenceEqual(new byte[2] { 1, 0 }));
+
+
+            Assert.True(loRaPayloadUplinkObj.devAddr.SequenceEqual(new byte[4] { 1,2,3,4 }));
+            byte[] LoRaPayloadUplinkNwkKey = new byte[16] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+
+
+            Assert.True(loRaPayloadUplinkObj.CheckMic(BitConverter.ToString(LoRaPayloadUplinkNwkKey).Replace("-", "")));
+
+                byte[] LoRaPayloadUplinkAppKey = new byte[16] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+            var key = BitConverter.ToString(LoRaPayloadUplinkAppKey).Replace("-", "");
+            Assert.Equal("hello", (loRaPayloadUplinkObj.DecryptPayload(key)));
+          
+           
+          
+
+
+        }
+
         //[Theory]
         //[InlineData("12321_3120321+32181230812309712312")]
         //public void InvalidPayload_ThrowsException(string payload)

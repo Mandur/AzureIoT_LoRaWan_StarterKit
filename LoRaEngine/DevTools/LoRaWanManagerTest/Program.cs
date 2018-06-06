@@ -164,8 +164,8 @@ namespace AESDemo
             {
                 Console.Write("Nok");
             }
-            LoRaPayloadUplink loRaPayloadUplinkObj = (LoRaPayloadUplink) jsonUplinkUnconfirmedMessage.payloadMessage;
-            if(loRaPayloadUplinkObj.fcnt.SequenceEqual(new byte[1] { 1 }))
+            LoRaPayloadUnconfirmedUplink loRaPayloadUplinkObj = (LoRaPayloadUnconfirmedUplink) jsonUplinkUnconfirmedMessage.payloadMessage;
+            if(loRaPayloadUplinkObj.fcnt.SequenceEqual(new byte[2] { 0,1 }))
             {
                 Console.Write("Nok");
 
@@ -191,6 +191,7 @@ namespace AESDemo
             {
                 Console.Write("Nok");
             }
+         
 
             Console.Read();
             Console.Read();

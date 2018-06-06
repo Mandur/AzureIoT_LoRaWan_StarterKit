@@ -347,7 +347,7 @@ namespace PacketManager
     /// <summary>
     /// the body of an Uplink (normal) message
     /// </summary>
-    public class LoRaPayloadUplink : LoRaUplinkPayload
+    public class LoRaPayloadUnconfirmedUplink : LoRaUplinkPayload
     {
       
         /// <summary>
@@ -380,7 +380,7 @@ namespace PacketManager
 
 
         /// <param name="inputMessage"></param>
-        public LoRaPayloadUplink(byte[] inputMessage) : base(inputMessage)
+        public LoRaPayloadUnconfirmedUplink(byte[] inputMessage) : base(inputMessage)
         {
 
             //get direction
@@ -488,6 +488,7 @@ namespace PacketManager
                     decrypted[bufferIndex + i] = (byte)(frmpayload[bufferIndex + i] ^ sBlock[i]);
                 }
             }
+            frmpayload = decrypted;
             return Encoding.Default.GetString(decrypted);
         }
 
@@ -497,6 +498,25 @@ namespace PacketManager
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
                              .ToArray();
+        }
+    }
+    #endregion
+    #region LoRaPayloadUnconfirmedDownlink
+    public class LoRaPayloadUnconfirmedDownlink : LoRaDownlinkPayload
+    {
+        public override byte[] CalculateMic(string nwskey)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override string EncryptPayload(string appSkey)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override byte[] ToMessage()
+        {
+            throw new NotImplementedException();
         }
     }
     #endregion
@@ -730,7 +750,7 @@ namespace PacketManager
                 loRaMessageType = (LoRaMessageType)messageType;
                 //Uplink Message
                 if (messageType == (int)LoRaMessageType.UnconfirmedDataUp)
-                    payloadMessage = new LoRaPayloadUplink(convertedInputMessage);
+                    payloadMessage = new LoRaPayloadUnconfirmedUplink(convertedInputMessage);
                 else if (messageType == (int)LoRaMessageType.JoinRequest)
                     payloadMessage = new LoRaPayloadJoinRequest(convertedInputMessage);
             }
