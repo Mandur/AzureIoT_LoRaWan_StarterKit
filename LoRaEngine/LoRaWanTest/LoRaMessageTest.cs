@@ -6,6 +6,10 @@ using System.Linq;
 
 namespace LoRaWanTest
 {
+
+    /// <summary>
+    /// all these test cases were inspired from https://github.com/brocaar/lora-app-server
+    /// </summary>
     public class LoRaMessageTest
     {
         [Fact]
@@ -198,6 +202,69 @@ namespace LoRaWanTest
         //{
         //    Assert.Equal(expectedResult, value + value2);
         //}
+
+        [Fact]
+        public void TestKeys()
+        {
+
+            //create random message
+            string jsonUplink = @"{ ""rxpk"":[
+ 	            {
+		            ""time"":""2013-03-31T16:21:17.528002Z"",
+ 		            ""tmst"":3512348611,
+ 		            ""chan"":2,
+ 		            ""rfch"":0,
+ 		            ""freq"":866.349812,
+ 		            ""stat"":1,
+ 		            ""modu"":""LORA"",
+ 		            ""datr"":""SF7BW125"",
+ 		            ""codr"":""4/6"",
+ 		            ""rssi"":-35,
+ 		            ""lsnr"":5.1,
+ 		            ""size"":32,
+ 		            ""data"":""AAQDAgEEAwIBBQQDAgUEAwItEGqZDhI=""
+                }]}";
+            var joinRequestInput = Encoding.Default.GetBytes(jsonUplink);
+            byte[] physicalUpstreamPyld = new byte[12];
+            physicalUpstreamPyld[0] = 2;
+            LoRaMessage joinRequestMessage = new LoRaMessage(physicalUpstreamPyld.Concat(joinRequestInput).ToArray());
+
+            var joinReq = (LoRaPayloadJoinRequest)joinRequestMessage.payloadMessage;
+            joinReq.devAddr = new byte[4]
+            {
+                4,3,2,1
+            };
+            joinReq.devEUI = new byte[8]
+            {
+                8,7,6,5,4,3,2,1
+            };
+            joinReq.devNonce = new byte[2]
+            {
+                2,1
+            };
+            joinReq.appEUI = new byte[8]
+            {
+                1,2,3,4,5,6,7,8
+            };
+
+            byte[] appNonce = new byte[3]
+            {
+                0,0,1
+            };
+            byte[] netId = new byte[3]
+            {
+                3,2,1
+            };
+            byte[] appKey = new byte[16]
+            {
+                1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8
+            };
+            var key = joinReq.calculateKey(new byte[1] { 0x01 }, appNonce, netId, joinReq.devNonce, appKey);
+            Assert.Equal(key, new byte[16]{
+                223, 83, 195, 95, 48, 52, 204, 206, 208, 255, 53, 76, 112, 222, 4, 223
+            }
+            );
+        }
 
     }
 }
