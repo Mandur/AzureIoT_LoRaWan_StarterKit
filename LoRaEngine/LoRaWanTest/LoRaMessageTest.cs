@@ -117,7 +117,7 @@ namespace LoRaWanTest
             LoRaMessage jsonUplinkUnconfirmedMessage = new LoRaMessage(physicalUpstreamPyld.Concat(jsonUplinkUnconfirmedDataUpBytes).ToArray());
             Assert.Equal(LoRaMessageType.UnconfirmedDataUp,jsonUplinkUnconfirmedMessage.loRaMessageType);
        
-            LoRaPayloadUnconfirmedUplink loRaPayloadUplinkObj = (LoRaPayloadUnconfirmedUplink)jsonUplinkUnconfirmedMessage.payloadMessage;
+            LoRaPayloadStandardData loRaPayloadUplinkObj = (LoRaPayloadStandardData)jsonUplinkUnconfirmedMessage.payloadMessage;
           
 
             Assert.True(loRaPayloadUplinkObj.fcnt.SequenceEqual(new byte[2] { 1, 0 }));
@@ -131,11 +131,52 @@ namespace LoRaWanTest
 
                 byte[] LoRaPayloadUplinkAppKey = new byte[16] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
             var key = BitConverter.ToString(LoRaPayloadUplinkAppKey).Replace("-", "");
-            Assert.Equal("hello", (loRaPayloadUplinkObj.DecryptPayload(key)));
-          
-           
-          
+            Assert.Equal("hello", (loRaPayloadUplinkObj.PerformEncryption(key)));
 
+        }
+
+        [Fact]
+        public void TestConfirmedDataUp()
+        {
+            byte[] mhdr = new byte[1];
+            mhdr[0] = 128;
+            byte[] devAddr = new byte[4]
+                {4,3,2,1
+                };
+
+            byte[] fctrl = new byte[1]{
+                0 };
+            byte[] fcnt = new byte[2]
+            {0,0 };
+            byte[] fport = new byte[1]
+            {
+                    10
+            };
+            byte[] frmPayload = new byte[4]
+            {
+                4,3,2,1
+            };
+
+            var appkey = new byte[16] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+            var nwkkey = new byte[16] { 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+            Array.Reverse(appkey);
+            Array.Reverse(nwkkey);
+
+            LoRaPayloadStandardData lora = new LoRaPayloadStandardData(mhdr, devAddr, fctrl, fcnt, null, fport, frmPayload);
+            lora.PerformEncryption(BitConverter.ToString(appkey).Replace("-", ""));
+            byte[] testEncrypt = new byte[4]
+            {
+                226, 100, 212, 247
+            };
+            Assert.Equal(testEncrypt, lora.frmpayload);
+            lora.SetMic(BitConverter.ToString(nwkkey).Replace("-", ""));
+            byte[] testMic = new byte[4]
+            {
+                181, 106, 14, 117
+            };
+            Assert.Equal(testMic,lora.mic);
+            var mess = lora.ToMessage();
+        
 
         }
 

@@ -3,6 +3,7 @@ using Microsoft.Azure.Devices.Client.Transport.Mqtt;
 using Microsoft.Azure.Devices.Shared;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -21,14 +22,20 @@ namespace LoRaWan.NetworkServer
         DeviceClient ioTHubModuleClient = null;
         MessageProcessor messageProcessor = null;
         bool exit = false;
+        public ConcurrentQueue<byte[]> OutboundMessages = new ConcurrentQueue<byte[]>();
+
+
+        private IPAddress remoteLoRaAggregatorIp;
+        private int remoteLoRaAggregatorPort;
 
         public async Task RunServer(bool bypassCertVerification)
         {
             await InitCallBack(bypassCertVerification);
 
-            if(!string.IsNullOrEmpty(connectionString))
+            if (!string.IsNullOrEmpty(connectionString))
             {
                 _ = RunUdpListener();
+                _= RunUdpSender();
             }
             else
             {
@@ -38,6 +45,26 @@ namespace LoRaWan.NetworkServer
             while (!exit)
             {
                 await Task.Delay(100);
+            }
+        }
+
+        async Task RunUdpSender()
+        {
+            while (true)
+            {
+                if (remoteLoRaAggregatorIp != null && remoteLoRaAggregatorPort != 0)
+                    udpClient.Connect(remoteLoRaAggregatorIp, remoteLoRaAggregatorPort);
+
+                    if (!OutboundMessages.IsEmpty)
+                {
+                    byte[] messageToSend = null;
+                    OutboundMessages.TryDequeue(out messageToSend);
+                    await udpClient.SendAsync(messageToSend, messageToSend.Length);
+                }
+                else
+                {
+                    System.Threading.Thread.SpinWait(500);
+                }
             }
         }
 
@@ -109,7 +136,7 @@ namespace LoRaWan.NetworkServer
                 // Attach callback for Twin desired properties updates
                 await ioTHubModuleClient.SetDesiredPropertyUpdateCallbackAsync(onDesiredPropertiesUpdate, null);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine($"Initialization failed with error: {ex.Message}.\nWaiting for update desired property 'connstr'.");
                 //connectionString = null;
@@ -129,7 +156,7 @@ namespace LoRaWan.NetworkServer
                 string connectionStringFromModule = Environment.GetEnvironmentVariable("EdgeHubConnectionString");
                 constructConnectionStringMask(connectionStringFromModule, connectionStringFromTwin);
 
-                if(!udpListenerRunning)
+                if (!udpListenerRunning)
                 {
                     _ = RunUdpListener();
                 }
@@ -161,7 +188,7 @@ namespace LoRaWan.NetworkServer
 
             string getVal(string key, string connStr)
             {
-                if(string.IsNullOrEmpty(key))
+                if (string.IsNullOrEmpty(key))
                 {
                     throw new Exception($"Key cannot be null");
                 }
@@ -197,9 +224,9 @@ namespace LoRaWan.NetworkServer
 
         public void Dispose()
         {
-            if(udpClient != null)
+            if (udpClient != null)
             {
-                if(udpClient.Client != null && udpClient.Client.Connected)
+                if (udpClient.Client != null && udpClient.Client.Connected)
                 {
                     try { udpClient.Client.Disconnect(false); } catch (Exception ex) { Console.WriteLine($"Udp Client socket disconnecting error: {ex.Message}"); }
                     try { udpClient.Client.Close(); } catch (Exception ex) { Console.WriteLine($"Udp Client socket closing error: {ex.Message}"); }
@@ -210,13 +237,13 @@ namespace LoRaWan.NetworkServer
                 try { udpClient.Dispose(); } catch (Exception ex) { Console.WriteLine($"Udp Client disposing error: {ex.Message}"); }
             }
 
-            if(ioTHubModuleClient != null)
+            if (ioTHubModuleClient != null)
             {
                 try { ioTHubModuleClient.CloseAsync().Wait(); } catch (Exception ex) { Console.WriteLine($"IoTHub Module Client closing error: {ex.Message}"); }
                 try { ioTHubModuleClient.Dispose(); } catch (Exception ex) { Console.WriteLine($"IoTHub Module Client disposing error: {ex.Message}"); }
             }
 
-            if(messageProcessor != null)
+            if (messageProcessor != null)
             {
                 try { messageProcessor.Dispose(); } catch (Exception ex) { Console.WriteLine($"Message Processor disposing error: {ex.Message}"); }
             }

@@ -183,67 +183,20 @@ namespace PacketManager
     }
     #endregion
 
-    #region LoRaDownlinkPayload
-    /// <summary>
-    /// Common class for all the Downlink LoRa Messages.
-    /// </summary>
-    public abstract class LoRaDownlinkPayload : LoRaGenericPayload
-    {
 
-        /// <summary>
-        /// Wrapper of a LoRa message, consisting of the MIC and MHDR, common to all LoRa messages
-        /// This is used for uplink / decoding.
-        /// </summary>
-        /// <param name="inputMessage"></param>
-        public LoRaDownlinkPayload(byte[] inputMessage) : base(inputMessage)
-        {
-
-        }
-
-        /// <summary>
-        /// This is used for downlink, when we need to compute those fields
-        /// TODO change this constructor as appropriate
-        /// </summary>
-        public LoRaDownlinkPayload()
-        {
-
-        }
-
-        /// <summary>
-        /// Method to calculate the encrypted version of the payload
-        /// </summary>
-        /// <param name="appSkey">the Application Secret Key</param>
-        /// <returns></returns>
-        public abstract string EncryptPayload(string appSkey);
-
-        /// <summary>
-        /// A Method to calculate the Mic of the message
-        /// </summary>
-        /// <param name="nwskey">The Network Secret Key</param>
-        /// <returns></returns>
-        public abstract byte[] CalculateMic(string nwskey);
-
-        /// <summary>
-        /// Method to take the different fields and assemble them in the message bytes
-        /// </summary>
-        /// <returns></returns>
-        public abstract byte[] ToMessage();
-
-    }
-    #endregion
 
     #region LoRaUplinkPayload
     /// <summary>
     /// Common class for all the Uplink LoRa Messages.
     /// </summary>
-    public abstract class LoRaUplinkPayload : LoRaGenericPayload
+    public abstract class LoRaDataPayload : LoRaGenericPayload
     {
         /// <summary>
         /// Wrapper of a LoRa message, consisting of the MIC and MHDR, common to all LoRa messages
         /// This is used for uplink / decoding
         /// </summary>
         /// <param name="inputMessage"></param>
-        public LoRaUplinkPayload(byte[] inputMessage) : base(inputMessage)
+        public LoRaDataPayload(byte[] inputMessage) : base(inputMessage)
         {
 
         }
@@ -251,17 +204,11 @@ namespace PacketManager
         /// <summary>
         /// This is used for downlink, when we need to compute those fields
         /// </summary>
-        public LoRaUplinkPayload()
+        public LoRaDataPayload()
         {
 
         }
 
-        /// <summary>
-        /// Method to Deccrypt payloads.
-        /// </summary>
-        /// <param name="appSkey">The Application Secret Key</param>
-        /// <returns></returns>
-        public abstract string DecryptPayload(string appSkey);
 
 
         /// <summary>
@@ -271,6 +218,72 @@ namespace PacketManager
         /// <returns></returns>
         public abstract bool CheckMic(string nwskey);
 
+
+        /// <summary>
+        /// Method to calculate the encrypted version of the payload
+        /// </summary>
+        /// <param name="appSkey">the Application Secret Key</param>
+        /// <returns></returns>
+        public abstract string PerformEncryption(string appSkey);
+
+        /// <summary>
+        /// A Method to calculate the Mic of the message
+        /// </summary>
+        /// <param name="nwskey">The Network Secret Key</param>
+        /// <returns></returns>
+        public byte[] CalculateMic(string appKey,byte [] algoinput)
+        {
+            IMac mac = MacUtilities.GetMac("AESCMAC");
+            KeyParameter key = new KeyParameter(StringToByteArray(appKey));
+            mac.Init(key);
+            byte[] rfu = new byte[1];
+            rfu[0] = 0x0;
+            //move
+
+
+            byte[] msgLength = BitConverter.GetBytes(algoinput.Length);
+
+            byte[] result = new byte[16];
+            mac.BlockUpdate(algoinput, 0, algoinput.Length);
+            result = MacUtilities.DoFinal(mac);
+            mic = result.Take(4).ToArray();
+            return mic;
+        }
+
+        /// <summary>
+        /// Method to take the different fields and assemble them in the message bytes
+        /// </summary>
+        /// <returns></returns>
+        public abstract byte[] ToMessage();
+        private byte[] StringToByteArray(string hex)
+        {
+            return Enumerable.Range(0, hex.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
+        }
+
+        public byte[] calculateKey(byte[] type,byte[] appnonce,byte[] netid, byte[] devnonce, byte[] appKey)
+        {
+            Aes aes = new AesManaged();
+            aes.Key = appKey;
+         
+            aes.Mode = CipherMode.ECB;
+            aes.Padding = PaddingMode.None;
+
+            byte []pt = type.Concat(appnonce).Concat(netid).Concat(devnonce).Concat(new byte[7]).ToArray();
+
+            aes.IV = new byte[16];
+            ICryptoTransform cipher;
+            cipher = aes.CreateEncryptor();
+   
+
+            var key = cipher.TransformFinalBlock(pt, 0, pt.Length);
+
+
+            return key;
+        }
+
     }
     #endregion
 
@@ -278,7 +291,7 @@ namespace PacketManager
     /// <summary>
     /// Implementation of the Join Request message type.
     /// </summary>
-    public class LoRaPayloadJoinRequest : LoRaUplinkPayload
+    public class LoRaPayloadJoinRequest : LoRaDataPayload
     {
 
         //aka JoinEUI
@@ -288,7 +301,7 @@ namespace PacketManager
 
         public LoRaPayloadJoinRequest(byte[] inputMessage) : base(inputMessage)
         {
-              //TODO Clean up debug fields
+            
             var inputmsgstr = BitConverter.ToString(inputMessage);
             //get the joinEUI field
             appEUI = new byte[8];
@@ -307,6 +320,8 @@ namespace PacketManager
             var devNonceStr = BitConverter.ToString(devNonce);
 
         }
+
+
 
         public override bool CheckMic(string AppKey)
         {
@@ -329,9 +344,14 @@ namespace PacketManager
             return mic.SequenceEqual(result.Take(4).ToArray());
         }
 
-        public override string DecryptPayload(string appSkey)
+        public override string PerformEncryption(string appSkey)
         {
             throw new NotImplementedException("The payload is not encrypted in case of a join message");
+        }
+
+        public override byte[] ToMessage()
+        {
+            throw new NotImplementedException();
         }
 
         private byte[] StringToByteArray(string hex)
@@ -347,7 +367,7 @@ namespace PacketManager
     /// <summary>
     /// the body of an Uplink (normal) message
     /// </summary>
-    public class LoRaPayloadUnconfirmedUplink : LoRaUplinkPayload
+    public class LoRaPayloadStandardData : LoRaDataPayload
     {
       
         /// <summary>
@@ -380,7 +400,7 @@ namespace PacketManager
 
 
         /// <param name="inputMessage"></param>
-        public LoRaPayloadUnconfirmedUplink(byte[] inputMessage) : base(inputMessage)
+        public LoRaPayloadStandardData(byte[] inputMessage) : base(inputMessage)
         {
 
             //get direction
@@ -431,6 +451,20 @@ namespace PacketManager
 
         }
 
+        public LoRaPayloadStandardData(byte[] _mhdr,byte[] _devAddr,byte[] _fctrl,byte[] _fcnt,byte [] _fOpts, byte [] _fPort ,byte [] _frmPayload) : base()
+        {
+            mhdr = _mhdr;
+            Array.Reverse(_devAddr);
+            devAddr = _devAddr;
+            fctrl = _fctrl;
+            fcnt = _fcnt;
+            fopts = _fOpts;
+            fport = _fPort;
+            frmpayload = _frmPayload;
+            Array.Reverse(frmpayload);
+            direction=0;
+        }
+
         /// <summary>
         /// Method to check if the mic is valid
         /// </summary>
@@ -450,13 +484,32 @@ namespace PacketManager
             return mic.SequenceEqual(result.Take(4).ToArray());
         }
 
+        public  void SetMic(string nwskey)
+        {
+            rawMessage = this.ToMessage();
+            IMac mac = MacUtilities.GetMac("AESCMAC");
+            KeyParameter key = new KeyParameter(StringToByteArray(nwskey));
+            mac.Init(key);
+            byte[] block = { 0x49, 0x00, 0x00, 0x00, 0x00, (byte)direction, (byte)(devAddr[3]), (byte)(devAddr[2]), (byte)(devAddr[1]),
+                (byte)(devAddr[0]),  fcnt[0] , fcnt[1],0x00, 0x00, 0x00, (byte)(rawMessage.Length) };
+            var algoinput = block.Concat(rawMessage.Take(rawMessage.Length)).ToArray();
+            byte[] result = new byte[16];
+            mac.BlockUpdate(algoinput, 0, algoinput.Length);
+            result = MacUtilities.DoFinal(mac);
+            mic = result.Take(4).ToArray();
+        }
+
+       
+
         /// <summary>
         /// src https://github.com/jieter/python-lora/blob/master/lora/crypto.py
         /// </summary>
-        public override string DecryptPayload(string appSkey)
+        public override string PerformEncryption(string appSkey)
         {
             AesEngine aesEngine = new AesEngine();
-            aesEngine.Init(true, new KeyParameter(StringToByteArray(appSkey)));
+            byte[] tmp = StringToByteArray(appSkey);
+          
+            aesEngine.Init(true, new KeyParameter(tmp));
 
             byte[] aBlock = { 0x01, 0x00, 0x00, 0x00, 0x00, (byte)direction, (byte)(devAddr[3]), (byte)(devAddr[2]), (byte)(devAddr[1]),
                 (byte)(devAddr[0]),(byte)(fcnt[0]),(byte)(fcnt[1]),  0x00 , 0x00, 0x00, 0x00 };
@@ -499,32 +552,32 @@ namespace PacketManager
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
                              .ToArray();
         }
-    }
-    #endregion
-    #region LoRaPayloadUnconfirmedDownlink
-    public class LoRaPayloadUnconfirmedDownlink : LoRaDownlinkPayload
-    {
-        public override byte[] CalculateMic(string nwskey)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string EncryptPayload(string appSkey)
-        {
-            throw new NotImplementedException();
-        }
 
         public override byte[] ToMessage()
         {
-            throw new NotImplementedException();
+            List<byte> messageArray = new List<Byte>();
+            messageArray.AddRange(mhdr);
+            messageArray.AddRange(devAddr.Reverse().ToArray());
+            messageArray.AddRange(fctrl);
+            messageArray.AddRange(fcnt);
+            if(fopts!=null)
+                messageArray.AddRange(fopts);
+            messageArray.AddRange(fport);
+            messageArray.AddRange(frmpayload);
+            if(mic!=null)
+                messageArray.AddRange(mic);
+            return messageArray.ToArray();
         }
+
+
     }
     #endregion
+    
     #region LoRaPayloadJoinAccept
     /// <summary>
     /// Implementation of a LoRa Join-Accept frame
     /// </summary>
-    public class LoRaPayloadJoinAccept : LoRaDownlinkPayload
+    public class LoRaPayloadJoinAccept : LoRaDataPayload
     {
         /// <summary>
         /// Server Nonce aka JoinNonce
@@ -578,9 +631,12 @@ namespace PacketManager
                 Array.Reverse(netID);
                 Array.Reverse(devAddr);
             }
+            var algoinput = mhdr.Concat(appNonce).Concat(netID).Concat(devAddr).Concat(dlSettings).Concat(rxDelay).ToArray();
+            if (cfList != null)
+                algoinput = algoinput.Concat(cfList).ToArray();
 
-            CalculateMic(appKey);
-            EncryptPayload(appKey);
+            CalculateMic(appKey,algoinput);
+            PerformEncryption(appKey);
         }
 
         private byte[] StringToByteArray(string hex)
@@ -591,7 +647,7 @@ namespace PacketManager
                              .ToArray();
         }
 
-        public override string EncryptPayload(string appSkey)
+        public override string PerformEncryption(string appSkey)
         {
             //return null;
             AesEngine aesEngine = new AesEngine();
@@ -623,26 +679,7 @@ namespace PacketManager
           
         }
 
-        public override byte[] CalculateMic(string appKey)
-        {
-            IMac mac = MacUtilities.GetMac("AESCMAC");
-            KeyParameter key = new KeyParameter(StringToByteArray(appKey));
-            mac.Init(key);
-            byte[] rfu = new byte[1];
-            rfu[0] = 0x0;
-            //move
-           
-            var algoinput = mhdr.Concat(appNonce).Concat(netID).Concat(devAddr).Concat(dlSettings).Concat(rxDelay).ToArray();
-            if (cfList != null)
-                algoinput = algoinput.Concat(cfList).ToArray();
-            byte[] msgLength = BitConverter.GetBytes(algoinput.Length);
 
-            byte[] result = new byte[16];
-            mac.BlockUpdate(algoinput, 0, algoinput.Length);
-            result = MacUtilities.DoFinal(mac);
-            mic = result.Take(4).ToArray();
-            return mic;
-        }
 
         public byte[] getFinalMessage(byte [] token)
         {
@@ -661,6 +698,13 @@ namespace PacketManager
     
             return messageArray.ToArray();
         }
+
+        public override bool CheckMic(string nwskey)
+        {
+            throw new NotImplementedException();
+        }
+
+
     }
     #endregion
 
@@ -750,7 +794,9 @@ namespace PacketManager
                 loRaMessageType = (LoRaMessageType)messageType;
                 //Uplink Message
                 if (messageType == (int)LoRaMessageType.UnconfirmedDataUp)
-                    payloadMessage = new LoRaPayloadUnconfirmedUplink(convertedInputMessage);
+                    payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
+                else if (messageType == (int)LoRaMessageType.ConfirmedDataUp)
+                    payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
                 else if (messageType == (int)LoRaMessageType.JoinRequest)
                     payloadMessage = new LoRaPayloadJoinRequest(convertedInputMessage);
             }
@@ -804,7 +850,7 @@ namespace PacketManager
         /// <returns>a boolean telling if the MIC is valid or not</returns>
         public bool CheckMic(string nwskey)
         {
-            return ((LoRaUplinkPayload)payloadMessage).CheckMic(nwskey);
+            return ((LoRaDataPayload)payloadMessage).CheckMic(nwskey);
         }
 
         /// <summary>
@@ -814,7 +860,7 @@ namespace PacketManager
         /// <returns>a boolean telling if the MIC is valid or not</returns>
         public string DecryptPayload(string appSkey)
         {
-            var retValue = ((LoRaUplinkPayload)payloadMessage).DecryptPayload(appSkey);
+            var retValue = ((LoRaDataPayload)payloadMessage).PerformEncryption(appSkey);
             loraMetadata.decodedData = retValue;
             return retValue;
         }

@@ -137,62 +137,88 @@ namespace AESDemo
             // if (msg.CompareTo( "20493EEB51FBA2116F810EDB3742975142")!=0)
             //     Console.WriteLine("Join Accept encryption was not computed correclty");
 
-          
-            string jsonUplinkUnconfirmedDataUp = @"{ ""rxpk"":[
-               {
-               ""time"":""2013-03-31T16:21:17.528002Z"",
-                ""tmst"":3512348611,
-                ""chan"":2,
-                ""rfch"":0,
-                ""freq"":866.349812,
-                ""stat"":1,
-                ""modu"":""LORA"",
-                ""datr"":""SF7BW125"",
-                ""codr"":""4/6"",
-                ""rssi"":-35,
-                ""lsnr"":5.1,
-                ""size"":32,
-                ""data"":""QAQDAgGAAQABppRkJhXWw7WC""
-                 }]}";
 
-            byte[] physicalUpstreamPyld = new byte[12];
-            physicalUpstreamPyld[0] = 2;
+            //string jsonUplinkUnconfirmedDataUp = @"{ ""rxpk"":[
+            //   {
+            //   ""time"":""2013-03-31T16:21:17.528002Z"",
+            //    ""tmst"":3512348611,
+            //    ""chan"":2,
+            //    ""rfch"":0,
+            //    ""freq"":866.349812,
+            //    ""stat"":1,
+            //    ""modu"":""LORA"",
+            //    ""datr"":""SF7BW125"",
+            //    ""codr"":""4/6"",
+            //    ""rssi"":-35,
+            //    ""lsnr"":5.1,
+            //    ""size"":32,
+            //    ""data"":""QAQDAgGAAQABppRkJhXWw7WC""
+            //     }]}";
 
-            var jsonUplinkUnconfirmedDataUpBytes = Encoding.Default.GetBytes(jsonUplinkUnconfirmedDataUp);
-            LoRaMessage jsonUplinkUnconfirmedMessage = new LoRaMessage(physicalUpstreamPyld.Concat(jsonUplinkUnconfirmedDataUpBytes).ToArray());
-            if (jsonUplinkUnconfirmedMessage.loRaMessageType != LoRaMessageType.UnconfirmedDataUp)
+            //byte[] physicalUpstreamPyld = new byte[12];
+            //physicalUpstreamPyld[0] = 2;
+
+            //var jsonUplinkUnconfirmedDataUpBytes = Encoding.Default.GetBytes(jsonUplinkUnconfirmedDataUp);
+            //LoRaMessage jsonUplinkUnconfirmedMessage = new LoRaMessage(physicalUpstreamPyld.Concat(jsonUplinkUnconfirmedDataUpBytes).ToArray());
+            //if (jsonUplinkUnconfirmedMessage.loRaMessageType != LoRaMessageType.UnconfirmedDataUp)
+            //{
+            //    Console.Write("Nok");
+            //}
+            //LoRaPayloadDataUp loRaPayloadUplinkObj = (LoRaPayloadDataUp) jsonUplinkUnconfirmedMessage.payloadMessage;
+            //if(loRaPayloadUplinkObj.fcnt.SequenceEqual(new byte[2] { 0,1 }))
+            //{
+            //    Console.Write("Nok");
+
+            //}
+
+            //if (loRaPayloadUplinkObj.devAddr.SequenceEqual(new byte[4] { 4,3,2,1 }))
+            //{
+            //    Console.Write("Nok");
+
+            //}
+
+            //byte[] appSKey = new byte[16] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+            //var key = BitConverter.ToString(appSKey).Replace("-","");
+            //if (loRaPayloadUplinkObj.DecryptPayload(key).CompareTo("hello")!=0)
+            //{
+            //    Console.Write("Nok");
+            //}
+
+            //byte[] networkSKey = new byte[16] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+            //var key2 = BitConverter.ToString(networkSKey).Replace("-", "");
+
+            //if (loRaPayloadUplinkObj.CheckMic(key2)!= true)
+            //{
+            //    Console.Write("Nok");
+            //}
+            byte[] mhdr = new byte[1];
+            mhdr[0] = 128;
+            byte[] devAddr = new byte[4]
+                {4,3,2,1
+                };
+
+            byte[] fctrl = new byte[1]{
+                0 };
+            byte[] fcnt = new byte[2]{
+                0,0 };
+            byte[] fport = new byte[1]
             {
-                Console.Write("Nok");
-            }
-            LoRaPayloadUnconfirmedUplink loRaPayloadUplinkObj = (LoRaPayloadUnconfirmedUplink) jsonUplinkUnconfirmedMessage.payloadMessage;
-            if(loRaPayloadUplinkObj.fcnt.SequenceEqual(new byte[2] { 0,1 }))
+                    10
+            };
+            byte[] frmPayload = new byte[4]
             {
-                Console.Write("Nok");
+                4,3,2,1
+            };
 
-            }
-
-            if (loRaPayloadUplinkObj.devAddr.SequenceEqual(new byte[4] { 4,3,2,1 }))
-            {
-                Console.Write("Nok");
-
-            }
-
-            byte[] appSKey = new byte[16] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
-            var key = BitConverter.ToString(appSKey).Replace("-","");
-            if (loRaPayloadUplinkObj.DecryptPayload(key).CompareTo("hello")!=0)
-            {
-                Console.Write("Nok");
-            }
-
-            byte[] networkSKey = new byte[16] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
-            var key2 = BitConverter.ToString(networkSKey).Replace("-", "");
-            
-            if (loRaPayloadUplinkObj.CheckMic(key2)!= true)
-            {
-                Console.Write("Nok");
-            }
-         
-
+            var appkey = new byte[16] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+            var nwkkey = new byte[16] { 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
+            Array.Reverse(appkey);
+            Array.Reverse(nwkkey);
+           
+            LoRaPayloadStandardData lora = new LoRaPayloadStandardData(mhdr, devAddr, fctrl, fcnt, null, fport, frmPayload);
+            lora.PerformEncryption(BitConverter.ToString(appkey).Replace("-", ""));
+            lora.SetMic(BitConverter.ToString(nwkkey).Replace("-", ""));
+            var mess = lora.ToMessage();
             Console.Read();
             Console.Read();
 
