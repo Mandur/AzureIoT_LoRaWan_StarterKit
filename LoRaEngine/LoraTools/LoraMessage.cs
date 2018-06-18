@@ -13,6 +13,11 @@ using System.Text;
 namespace PacketManager
 {
 
+    public enum PhysicalIdentifier
+    {
+        PUSH_DATA,PUSH_ACK,PULL_DATA, PULL_RESP, PULL_ACK,TX_ACK
+    }
+
     /// <summary>
     /// The Physical Payload wrapper
     /// </summary>
@@ -25,10 +30,10 @@ namespace PacketManager
 
             protocolVersion = input[0];
             Array.Copy(input, 1, token, 0, 2);
-            identifier = input[3];
+            identifier = (PhysicalIdentifier)input[3];
 
             //PUSH_DATA That packet type is used by the gateway mainly to forward the RF packets received, and associated metadata, to the server
-            if (identifier == 0x00)
+            if (identifier == PhysicalIdentifier.PUSH_DATA)
             {
                 Array.Copy(input, 4, gatewayIdentifier, 0, 8);
                 message = new byte[input.Length - 12];
@@ -36,13 +41,13 @@ namespace PacketManager
             }
 
             //PULL_DATA That packet type is used by the gateway to poll data from the server.
-            if (identifier == 0x02)
+            if (identifier == PhysicalIdentifier.PULL_DATA)
             {
                 Array.Copy(input, 4, gatewayIdentifier, 0, 8);
             }
 
             //TX_ACK That packet type is used by the gateway to send a feedback to the to inform if a downlink request has been accepted or rejected by the gateway.
-            if (identifier == 0x05)
+            if (identifier == PhysicalIdentifier.TX_ACK)
             {
                 Array.Copy(input, 4, gatewayIdentifier, 0, 8);
                 Array.Copy(input, 12, message, 0, input.Length - 12);
@@ -50,18 +55,18 @@ namespace PacketManager
         }
 
         //downlink transmission
-        public PhysicalPayload(byte[] _token, byte type, byte[] _message)
+        public PhysicalPayload(byte[] _token, PhysicalIdentifier type, byte[] _message)
         {
             //0x01 PUSH_ACK That packet type is used by the server to acknowledge immediately all the PUSH_DATA packets received.
             //0x04 PULL_ACK That packet type is used by the server to confirm that the network route is open and that the server can send PULL_RESP packets at any time.
-            if (type == 1 || type == 4)
+            if (type == PhysicalIdentifier.PUSH_ACK || type == PhysicalIdentifier.PULL_ACK)
             {
                 token = _token;
                 identifier = type;
             }
 
             //0x03 PULL_RESP That packet type is used by the server to send RF packets and  metadata that will have to be emitted by the gateway.
-            if (type == 3)
+            if (type == PhysicalIdentifier.PULL_RESP)
             {
                 token = _token;
                 identifier = type;
@@ -76,7 +81,7 @@ namespace PacketManager
         //1-2 bytes
         public byte[] token =new byte[2];
         //1 byte
-        public byte identifier;
+        public PhysicalIdentifier identifier;
         //8 bytes
         public byte[] gatewayIdentifier = new byte[8];
         //0-unlimited
@@ -87,8 +92,12 @@ namespace PacketManager
             List<byte> returnList = new List<byte>();
             returnList.Add(protocolVersion);
             returnList.AddRange(token);
-            returnList.Add(identifier);
-            returnList.AddRange(gatewayIdentifier);
+            returnList.Add((byte)identifier);
+            if(identifier==PhysicalIdentifier.PULL_DATA||
+                identifier==PhysicalIdentifier.TX_ACK||
+                identifier==PhysicalIdentifier.PUSH_DATA
+                )
+                returnList.AddRange(gatewayIdentifier);
             returnList.AddRange(message);
             return returnList.ToArray();
         }
@@ -609,7 +618,7 @@ namespace PacketManager
         /// </summary>
         public byte[] fcnt;
 
-        public LoRaPayloadJoinAccept(string _netId, string appKey, byte[] _devAddr, byte[] _devNonce)
+        public LoRaPayloadJoinAccept(string _netId, string appKey, byte[] _devAddr, byte[] _appNonce)
         {
             appNonce = new byte[3];
             netID = new byte[3];
@@ -618,7 +627,7 @@ namespace PacketManager
             rxDelay = new byte[1];
             //set payload Wrapper fields
             mhdr = new byte[] { 32};
-            appNonce=_devNonce;
+            appNonce=_appNonce;
             netID = StringToByteArray(_netId);
             //default param 869.525 MHz / DR0 (F12, 125 kHz)  
             dlSettings[0]=0;
@@ -686,7 +695,7 @@ namespace PacketManager
 
             var downlinkmsg = new DownlinkPktFwdMessage(Convert.ToBase64String(rawMessage));
             var messageBytes = Encoding.Default.GetBytes(JsonConvert.SerializeObject(downlinkmsg));
-            PhysicalPayload message = new PhysicalPayload(token,0x03,messageBytes);
+            PhysicalPayload message = new PhysicalPayload(token,PhysicalIdentifier.PULL_RESP,messageBytes);
             return message.GetMessage();
         }
 
@@ -766,7 +775,10 @@ namespace PacketManager
     /// </summary>
     public class LoRaMessage
     {
-        public bool processed = false;
+        /// <summary>
+        /// see 
+        /// </summary>
+        public bool isLoRaMessage = false;
         public LoRaGenericPayload payloadMessage;
         public LoRaMetada loraMetadata;
         public PhysicalPayload physicalPayload;
@@ -783,10 +795,10 @@ namespace PacketManager
         public LoRaMessage(byte[] inputMessage)
         {
             //packet normally sent by the gateway as heartbeat. TODO find more elegant way to integrate.
-            if (inputMessage.Length > 12 && inputMessage.Length!=111)
+         
+            physicalPayload = new PhysicalPayload(inputMessage);
+            if (physicalPayload.message != null)
             {
-                processed = true;
-                physicalPayload = new PhysicalPayload(inputMessage);
                 loraMetadata = new LoRaMetada(physicalPayload.message);
                 //set up the parts of the raw message   
                 byte[] convertedInputMessage = Convert.FromBase64String(loraMetadata.rawB64data);
@@ -799,11 +811,11 @@ namespace PacketManager
                     payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
                 else if (messageType == (int)LoRaMessageType.JoinRequest)
                     payloadMessage = new LoRaPayloadJoinRequest(convertedInputMessage);
+                isLoRaMessage = true;
             }
             else
             {
-                Console.WriteLine(BitConverter.ToString(inputMessage));
-                processed = false;
+                isLoRaMessage = false;
             }
 
         }
@@ -828,7 +840,7 @@ namespace PacketManager
                 payloadMessage = (LoRaPayloadJoinAccept)payload;
                 loraMetadata = new LoRaMetada(payloadMessage, type);
      
-                physicalPayload = new PhysicalPayload(physicalToken,0x03,Encoding.Default.GetBytes(loraMetadata.rawB64data));
+                physicalPayload = new PhysicalPayload(physicalToken,PhysicalIdentifier.PULL_RESP,Encoding.Default.GetBytes(loraMetadata.rawB64data));
                 physicalPayload.message = ((LoRaPayloadJoinAccept)payload).getFinalMessage(physicalToken);
 
             }

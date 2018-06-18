@@ -180,7 +180,7 @@ namespace LoRaWanTest
             };
             Assert.Equal(testMic,lora.mic);
             var mess = lora.ToMessage();
-        
+        //TODO
 
         }
 

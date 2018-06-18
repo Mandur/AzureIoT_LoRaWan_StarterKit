@@ -18,11 +18,10 @@ namespace LoRaWan.NetworkServer
 
         string connectionString = "HostName=testiotmikou.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=h2XcVzgOtQqAQgRA8pV6fUoGHIh9O2vFdfSsqzYD8b0=";
         bool udpListenerRunning = false;
-        UdpClient udpClient = null;
+        static UdpClient udpClient = null;
         DeviceClient ioTHubModuleClient = null;
         MessageProcessor messageProcessor = null;
         bool exit = false;
-        public ConcurrentQueue<byte[]> OutboundMessages = new ConcurrentQueue<byte[]>();
 
 
         private IPAddress remoteLoRaAggregatorIp;
@@ -35,7 +34,6 @@ namespace LoRaWan.NetworkServer
             if (!string.IsNullOrEmpty(connectionString))
             {
                 _ = RunUdpListener();
-                _= RunUdpSender();
             }
             else
             {
@@ -48,24 +46,14 @@ namespace LoRaWan.NetworkServer
             }
         }
 
-        async Task RunUdpSender()
+        static async Task SendMessage(byte[] messageToSend, IPAddress ipAddress,int port)
         {
-            while (true)
-            {
-                if (remoteLoRaAggregatorIp != null && remoteLoRaAggregatorPort != 0)
-                    udpClient.Connect(remoteLoRaAggregatorIp, remoteLoRaAggregatorPort);
+          
+                    udpClient.Connect(ipAddress, port);
 
-                    if (!OutboundMessages.IsEmpty)
-                {
-                    byte[] messageToSend = null;
-                    OutboundMessages.TryDequeue(out messageToSend);
+                 
                     await udpClient.SendAsync(messageToSend, messageToSend.Length);
-                }
-                else
-                {
-                    System.Threading.Thread.SpinWait(500);
-                }
-            }
+           
         }
 
         async Task RunUdpListener()
