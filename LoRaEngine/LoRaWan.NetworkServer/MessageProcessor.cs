@@ -17,15 +17,14 @@ namespace LoRaWan.NetworkServer
         public async Task processMessage(byte[] message, string connectionString)
         {
             LoRaMessage loraMessage = new LoRaMessage(message);
-
+            byte[] messageToSend = new Byte[0];
             if (!loraMessage.isLoRaMessage)
             {
                 if (loraMessage.physicalPayload.identifier == PhysicalIdentifier.PULL_DATA)
                 {
                     PhysicalPayload pullAck = new PhysicalPayload(loraMessage.physicalPayload.token,PhysicalIdentifier.PULL_ACK,null);
-                    pullAck.GetMessage();
+                     messageToSend=pullAck.GetMessage();
                     
-                    //todo add message
                 }
             }
             else
@@ -45,10 +44,10 @@ namespace LoRaWan.NetworkServer
                         appNonce
                         );
                     LoRaMessage joinAcceptMessage = new LoRaMessage(loRaPayloadJoinAccept, LoRaMessageType.JoinAccept, new byte[] { 0x01 });
-                    //joinAcceptMessage.physicalPayload.message;
+                    messageToSend=joinAcceptMessage.physicalPayload.message;
 
                 }
-               
+               //normal message
                 else
                 {
                     Console.WriteLine($"Processing message from device: {BitConverter.ToString(loraMessage.payloadMessage.devAddr)}");
@@ -72,6 +71,8 @@ namespace LoRaWan.NetworkServer
                             return;
                         }
 
+                        PhysicalPayload pushAck = new PhysicalPayload(loraMessage.physicalPayload.token, PhysicalIdentifier.PUSH_ACK, null);
+                        messageToSend = pushAck.GetMessage();
                         Console.WriteLine($"Sending message '{decryptedMessage}' to hub...");
 
                         int hubSendCounter = 1;
@@ -95,6 +96,8 @@ namespace LoRaWan.NetworkServer
                         Console.WriteLine("Check MIC failed! Message will be ignored...");
                     }
                 }
+                //send reply
+                _ = UdpServer.SendMessage(messageToSend);
             }
         }
 

@@ -24,8 +24,8 @@ namespace LoRaWan.NetworkServer
         bool exit = false;
 
 
-        private IPAddress remoteLoRaAggregatorIp;
-        private int remoteLoRaAggregatorPort;
+        private static IPAddress remoteLoRaAggregatorIp;
+        private static int remoteLoRaAggregatorPort;
 
         public async Task RunServer(bool bypassCertVerification)
         {
@@ -46,14 +46,13 @@ namespace LoRaWan.NetworkServer
             }
         }
 
-        static async Task SendMessage(byte[] messageToSend, IPAddress ipAddress,int port)
+        public static async Task SendMessage(byte[] messageToSend)
         {
-          
-                    udpClient.Connect(ipAddress, port);
 
-                 
-                    await udpClient.SendAsync(messageToSend, messageToSend.Length);
-           
+
+
+            await udpClient.SendAsync(messageToSend, messageToSend.Length);
+
         }
 
         async Task RunUdpListener()
@@ -74,6 +73,15 @@ namespace LoRaWan.NetworkServer
                     {
                         UdpReceiveResult receivedResults = await udpClient.ReceiveAsync();
                         Console.WriteLine($"UDP message received ({receivedResults.Buffer.Length} bytes).");
+
+                        //connection
+                        if (remoteLoRaAggregatorIp == null)
+                        {
+                            remoteLoRaAggregatorIp = receivedResults.RemoteEndPoint.Address;
+                            remoteLoRaAggregatorPort = receivedResults.RemoteEndPoint.Port;
+                            udpClient.Connect(remoteLoRaAggregatorIp, remoteLoRaAggregatorPort);
+                        }
+
                         messageProcessor = new MessageProcessor();
                         await messageProcessor.processMessage(receivedResults.Buffer, connectionString);
                     }
@@ -220,21 +228,18 @@ namespace LoRaWan.NetworkServer
                     try { udpClient.Client.Close(); } catch (Exception ex) { Console.WriteLine($"Udp Client socket closing error: {ex.Message}"); }
                     try { udpClient.Client.Dispose(); } catch (Exception ex) { Console.WriteLine($"Udp Client socket disposing error: {ex.Message}"); }
                 }
-
                 try { udpClient.Close(); } catch (Exception ex) { Console.WriteLine($"Udp Client closing error: {ex.Message}"); }
                 try { udpClient.Dispose(); } catch (Exception ex) { Console.WriteLine($"Udp Client disposing error: {ex.Message}"); }
             }
-
             if (ioTHubModuleClient != null)
             {
                 try { ioTHubModuleClient.CloseAsync().Wait(); } catch (Exception ex) { Console.WriteLine($"IoTHub Module Client closing error: {ex.Message}"); }
                 try { ioTHubModuleClient.Dispose(); } catch (Exception ex) { Console.WriteLine($"IoTHub Module Client disposing error: {ex.Message}"); }
             }
-
             if (messageProcessor != null)
             {
                 try { messageProcessor.Dispose(); } catch (Exception ex) { Console.WriteLine($"Message Processor disposing error: {ex.Message}"); }
-            }
+            }   
         }
     }
 }
