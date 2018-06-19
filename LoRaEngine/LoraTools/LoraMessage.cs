@@ -98,7 +98,8 @@ namespace PacketManager
                 identifier==PhysicalIdentifier.PUSH_DATA
                 )
                 returnList.AddRange(gatewayIdentifier);
-            returnList.AddRange(message);
+            if(message !=null)
+                returnList.AddRange(message);
             return returnList.ToArray();
         }
     }
@@ -815,7 +816,8 @@ namespace PacketManager
             }
             else
             {
-                isLoRaMessage = false;
+         
+                    isLoRaMessage = false;
             }
 
         }

@@ -96,9 +96,11 @@ namespace LoRaWan.NetworkServer
                         Console.WriteLine("Check MIC failed! Message will be ignored...");
                     }
                 }
-                //send reply
-                _ = UdpServer.SendMessage(messageToSend);
+
             }
+            var debug = BitConverter.ToString(messageToSend);
+            //send reply
+            await UdpServer.SendMessage(messageToSend);
         }
 
         public void Dispose()

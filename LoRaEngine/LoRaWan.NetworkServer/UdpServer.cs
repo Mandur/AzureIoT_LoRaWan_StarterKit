@@ -83,6 +83,7 @@ namespace LoRaWan.NetworkServer
                         }
 
                         messageProcessor = new MessageProcessor();
+                        Console.WriteLine("length: "+receivedResults.Buffer.Length);
                         await messageProcessor.processMessage(receivedResults.Buffer, connectionString);
                     }
                 }
