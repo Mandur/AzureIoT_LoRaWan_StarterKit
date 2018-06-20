@@ -2,6 +2,7 @@
 using PacketManager;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -24,27 +25,31 @@ namespace LoRaWan.NetworkServer
                 {
                     PhysicalPayload pullAck = new PhysicalPayload(loraMessage.physicalPayload.token,PhysicalIdentifier.PULL_ACK,null);
                      messageToSend=pullAck.GetMessage();
-                    
+                    Console.WriteLine("Pull Ack sent");
                 }
             }
             else
             {
                 if (loraMessage.loRaMessageType == LoRaMessageType.JoinRequest)
                 {
+                    Console.WriteLine("Join Request Received");
                     Random rnd = new Random();
                     byte[] appNonce = new byte[3];
+                    byte[] devAddr = new byte[4];
                     rnd.NextBytes(appNonce);
+                    rnd.NextBytes(devAddr);
                     LoRaPayloadJoinAccept loRaPayloadJoinAccept = new LoRaPayloadJoinAccept(
                         //NETID 0 / 1 is default test 
                         BitConverter.ToString(new byte[3]),
                         //todo add app key management
                         testKey,
                         //todo add device address management
-                        Encoding.Default.GetBytes(testDeviceId),
+                        devAddr ,
                         appNonce
                         );
                     LoRaMessage joinAcceptMessage = new LoRaMessage(loRaPayloadJoinAccept, LoRaMessageType.JoinAccept, new byte[] { 0x01 });
                     messageToSend=joinAcceptMessage.physicalPayload.message;
+                    Console.WriteLine("Join Accept sent");
 
                 }
                //normal message
@@ -101,7 +106,7 @@ namespace LoRaWan.NetworkServer
             var debug = BitConverter.ToString(messageToSend);
             //send reply
             await UdpServer.SendMessage(messageToSend);
-        }
+                }
 
         public void Dispose()
         {
@@ -109,6 +114,14 @@ namespace LoRaWan.NetworkServer
             {
                 try { sender.Dispose(); } catch (Exception ex) { Console.WriteLine($"IoT Hub Sender disposing error: {ex.Message}"); }
             }
+        }
+
+        private byte[] StringToByteArray(string hex)
+        {
+            return Enumerable.Range(0, hex.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
         }
     }
 }

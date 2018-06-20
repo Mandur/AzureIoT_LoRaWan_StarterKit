@@ -629,7 +629,7 @@ namespace PacketManager
             //set payload Wrapper fields
             mhdr = new byte[] { 32};
             appNonce=_appNonce;
-            netID = StringToByteArray(_netId);
+            netID = StringToByteArray(_netId.Replace("-",""));
             //default param 869.525 MHz / DR0 (F12, 125 kHz)  
             dlSettings[0]=0;
             //TODO Implement
@@ -743,7 +743,8 @@ namespace PacketManager
             var payloadObject = JsonConvert.DeserializeObject<UplinkPktFwdMessage>(payload);
             fullPayload = payloadObject;
             //TODO to this in a loop.
-            rawB64data = payloadObject.rxpk[0].data;
+            if(payloadObject.rxpk.Count>0)
+                rawB64data = payloadObject.rxpk[0].data;
        
         }
 
@@ -802,22 +803,29 @@ namespace PacketManager
             {
                 loraMetadata = new LoRaMetada(physicalPayload.message);
                 //set up the parts of the raw message   
-                byte[] convertedInputMessage = Convert.FromBase64String(loraMetadata.rawB64data);
-                var messageType = convertedInputMessage[0] >> 5;
-                loRaMessageType = (LoRaMessageType)messageType;
-                //Uplink Message
-                if (messageType == (int)LoRaMessageType.UnconfirmedDataUp)
-                    payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
-                else if (messageType == (int)LoRaMessageType.ConfirmedDataUp)
-                    payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
-                else if (messageType == (int)LoRaMessageType.JoinRequest)
-                    payloadMessage = new LoRaPayloadJoinRequest(convertedInputMessage);
-                isLoRaMessage = true;
-            }
-            else
-            {
-         
+                //status message
+                if (loraMetadata.rawB64data != null)
+                {
+                    byte[] convertedInputMessage = Convert.FromBase64String(loraMetadata.rawB64data);
+                    var messageType = convertedInputMessage[0] >> 5;
+                    loRaMessageType = (LoRaMessageType)messageType;
+                    //Uplink Message
+                    if (messageType == (int)LoRaMessageType.UnconfirmedDataUp)
+                        payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
+                    else if (messageType == (int)LoRaMessageType.ConfirmedDataUp)
+                        payloadMessage = new LoRaPayloadStandardData(convertedInputMessage);
+                    else if (messageType == (int)LoRaMessageType.JoinRequest)
+                        payloadMessage = new LoRaPayloadJoinRequest(convertedInputMessage);
+                    isLoRaMessage = true;
+                }
+                else
+                {
+
                     isLoRaMessage = false;
+                }
+            }else
+            {
+                isLoRaMessage = false;
             }
 
         }
@@ -917,7 +925,7 @@ namespace PacketManager
                 freq = 868.100000,
                 rfch = 0,
                 modu = "LORA",
-                datr = "SF11BW125",
+                datr = "SF12BW125",
                 codr = "4/5",
                 powe = 14
 

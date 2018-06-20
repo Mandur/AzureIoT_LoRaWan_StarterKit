@@ -19,6 +19,7 @@ namespace LoRaWan.NetworkServer
         string connectionString = "HostName=testiotmikou.azure-devices.net;SharedAccessKeyName=iothubowner;SharedAccessKey=h2XcVzgOtQqAQgRA8pV6fUoGHIh9O2vFdfSsqzYD8b0=";
         bool udpListenerRunning = false;
         static UdpClient udpClient = null;
+   
         DeviceClient ioTHubModuleClient = null;
         MessageProcessor messageProcessor = null;
         bool exit = false;
@@ -50,15 +51,12 @@ namespace LoRaWan.NetworkServer
         {
 
 
-
-            await udpClient.SendAsync(messageToSend, messageToSend.Length);
+            await udpClient.SendAsync(messageToSend, messageToSend.Length,remoteLoRaAggregatorIp.ToString(), remoteLoRaAggregatorPort);
 
         }
 
         async Task RunUdpListener()
         {
-            while (true) //Continious restart logic...
-            {
                 try
                 {
                     Console.WriteLine($"#{++retryCount} attempt to start UDP Listener...");
@@ -79,21 +77,19 @@ namespace LoRaWan.NetworkServer
                         {
                             remoteLoRaAggregatorIp = receivedResults.RemoteEndPoint.Address;
                             remoteLoRaAggregatorPort = receivedResults.RemoteEndPoint.Port;
-                            udpClient.Connect(remoteLoRaAggregatorIp, remoteLoRaAggregatorPort);
+                
                         }
 
                         messageProcessor = new MessageProcessor();
-                        Console.WriteLine("length: "+receivedResults.Buffer.Length);
-                        await messageProcessor.processMessage(receivedResults.Buffer, connectionString);
+                       await messageProcessor.processMessage(receivedResults.Buffer, connectionString);
                     }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Failed to start UDP Listener on port {PORT}: {ex.Message}");
                 }
-
-                Task.Delay(5000).Wait();
-            }
+            
+            
         }
 
         async Task InitCallBack(bool bypassCertVerification)
