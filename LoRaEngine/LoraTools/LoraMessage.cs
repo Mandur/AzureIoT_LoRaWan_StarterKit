@@ -49,8 +49,13 @@ namespace PacketManager
             //TX_ACK That packet type is used by the gateway to send a feedback to the to inform if a downlink request has been accepted or rejected by the gateway.
             if (identifier == PhysicalIdentifier.TX_ACK)
             {
+                Console.WriteLine("TX ACK RECEIVED");
                 Array.Copy(input, 4, gatewayIdentifier, 0, 8);
-                Array.Copy(input, 12, message, 0, input.Length - 12);
+                if (input.Length - 12 > 0)
+                {
+                    message = new byte[input.Length - 12];
+                    Array.Copy(input, 12, message, 0, input.Length - 12);
+                }
             }
         }
 
@@ -691,14 +696,7 @@ namespace PacketManager
 
 
 
-        public byte[] getFinalMessage(byte [] token)
-        {
 
-            var downlinkmsg = new DownlinkPktFwdMessage(Convert.ToBase64String(rawMessage));
-            var messageBytes = Encoding.Default.GetBytes(JsonConvert.SerializeObject(downlinkmsg));
-            PhysicalPayload message = new PhysicalPayload(token,PhysicalIdentifier.PULL_RESP,messageBytes);
-            return message.GetMessage();
-        }
 
         public override byte[] ToMessage()
         {
@@ -849,9 +847,12 @@ namespace PacketManager
             {
                 payloadMessage = (LoRaPayloadJoinAccept)payload;
                 loraMetadata = new LoRaMetada(payloadMessage, type);
-     
-                physicalPayload = new PhysicalPayload(physicalToken,PhysicalIdentifier.PULL_RESP,Encoding.Default.GetBytes(loraMetadata.rawB64data));
-                physicalPayload.message = ((LoRaPayloadJoinAccept)payload).getFinalMessage(physicalToken);
+                var downlinkmsg = new DownlinkPktFwdMessage(loraMetadata.rawB64data);
+                var jsonMsg = JsonConvert.SerializeObject(downlinkmsg);
+                var messageBytes = Encoding.Default.GetBytes(jsonMsg);
+                
+                physicalPayload = new PhysicalPayload(physicalToken, PhysicalIdentifier.PULL_RESP,messageBytes);
+
 
             }
             else if (type == LoRaMessageType.UnconfirmedDataDown)
@@ -914,19 +915,20 @@ namespace PacketManager
         public Txpk txpk;
 
 
-        //TODO change values to match network.
+        //TODO change values to match network
         public DownlinkPktFwdMessage(string _data)
         {
+            var byteData = Convert.FromBase64String(_data);
             txpk = new Txpk()
             {
                 imme = true,
                 data = _data,
-                size = (uint)(_data.Length * 3 / 4),
+                size = (uint)byteData.Length,
                 freq = 868.100000,
                 rfch = 0,
                 modu = "LORA",
                 datr = "SF12BW125",
-                codr = "4/5",
+                codr = "4/6",
                 powe = 14
 
             };

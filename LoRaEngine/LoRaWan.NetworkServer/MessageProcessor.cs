@@ -35,22 +35,27 @@ namespace LoRaWan.NetworkServer
                     Console.WriteLine("Join Request Received");
                     Random rnd = new Random();
                     byte[] appNonce = new byte[3];
-                    byte[] devAddr = new byte[4];
+                    byte[] netId = new byte[3] { 0,0,0};
+                    byte[] devAddr = new byte[4] { 0,0,0,0};
                     rnd.NextBytes(appNonce);
-                    rnd.NextBytes(devAddr);
                     LoRaPayloadJoinAccept loRaPayloadJoinAccept = new LoRaPayloadJoinAccept(
                         //NETID 0 / 1 is default test 
-                        BitConverter.ToString(new byte[3]),
+                        BitConverter.ToString(netId).Replace("-",""),
                         //todo add app key management
                         testKey,
                         //todo add device address management
                         devAddr ,
                         appNonce
                         );
-                    LoRaMessage joinAcceptMessage = new LoRaMessage(loRaPayloadJoinAccept, LoRaMessageType.JoinAccept, new byte[] { 0x01 });
-                    messageToSend=joinAcceptMessage.physicalPayload.message;
+                  
+                    LoRaMessage joinAcceptMessage = new LoRaMessage(loRaPayloadJoinAccept, LoRaMessageType.JoinAccept, loraMessage.physicalPayload.token);
+                  
+                    messageToSend =joinAcceptMessage.physicalPayload.GetMessage();
                     Console.WriteLine("Join Accept sent");
 
+                }else if (loraMessage.loRaMessageType == LoRaMessageType.JoinAccept)
+                {
+                    Console.WriteLine("join accept message received");
                 }
                //normal message
                 else
