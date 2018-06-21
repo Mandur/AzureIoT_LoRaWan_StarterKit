@@ -112,6 +112,7 @@ namespace PacketManager
     {
         public bool imme;
         public string data;
+        public long tmst;
         public uint size;
         public double freq; //868
         public uint rfch;
@@ -119,6 +120,7 @@ namespace PacketManager
         public string datr;
         public string codr;
         public uint powe;
+        public bool ipol;
     }
 
     public class Rxpk
@@ -629,16 +631,17 @@ namespace PacketManager
             appNonce = new byte[3];
             netID = new byte[3];
             devAddr = _devAddr;
-            dlSettings = new byte[1];
-            rxDelay = new byte[1];
+            dlSettings = new byte[1] { 0};
+            rxDelay = new byte[1] { 0 };
             //set payload Wrapper fields
             mhdr = new byte[] { 32};
             appNonce=_appNonce;
             netID = StringToByteArray(_netId.Replace("-",""));
             //default param 869.525 MHz / DR0 (F12, 125 kHz)  
-            dlSettings[0]=0;
-            //TODO Implement
+      
+            //TODO delete
             cfList = null;
+           // cfList = StringToByteArray("184F84E85684B85E84886684586E8400");
             fcnt = BitConverter.GetBytes(0x01);
             if (BitConverter.IsLittleEndian)
             {
@@ -686,6 +689,7 @@ namespace PacketManager
             aes.Padding = PaddingMode.None;
 
             ICryptoTransform cipher;    
+          
                 cipher = aes.CreateDecryptor();
             var encryptedPayload = cipher.TransformFinalBlock(pt, 0, pt.Length);
             rawMessage = new byte[encryptedPayload.Length];
@@ -741,8 +745,10 @@ namespace PacketManager
             var payloadObject = JsonConvert.DeserializeObject<UplinkPktFwdMessage>(payload);
             fullPayload = payloadObject;
             //TODO to this in a loop.
-            if(payloadObject.rxpk.Count>0)
+            if (payloadObject.rxpk.Count > 0)
+            {
                 rawB64data = payloadObject.rxpk[0].data;
+            }
        
         }
 
@@ -866,6 +872,34 @@ namespace PacketManager
 
         }
 
+        public LoRaMessage(LoRaGenericPayload payload, LoRaMessageType type, byte[] physicalToken,string _datr,uint _rfch,double _freq,long _tmst)
+        {
+            //construct a Join Accept Message
+            if (type == LoRaMessageType.JoinAccept)
+            {
+                payloadMessage = (LoRaPayloadJoinAccept)payload;
+                loraMetadata = new LoRaMetada(payloadMessage, type);
+                var downlinkmsg = new DownlinkPktFwdMessage(loraMetadata.rawB64data,_datr,_rfch,_freq, _tmst);
+              
+                var jsonMsg = JsonConvert.SerializeObject(downlinkmsg);
+                Console.WriteLine(jsonMsg);
+                var messageBytes = Encoding.Default.GetBytes(jsonMsg);
+
+                physicalPayload = new PhysicalPayload(physicalToken, PhysicalIdentifier.PULL_RESP, messageBytes);
+
+
+            }
+            else if (type == LoRaMessageType.UnconfirmedDataDown)
+            {
+                throw new NotImplementedException();
+            }
+            else if (type == LoRaMessageType.ConfirmedDataDown)
+            {
+                throw new NotImplementedException();
+            }
+
+        }
+
         /// <summary>
         /// Method to map the Mic check to the appropriate implementation.
         /// </summary>
@@ -924,12 +958,32 @@ namespace PacketManager
                 imme = true,
                 data = _data,
                 size = (uint)byteData.Length,
-                freq = 868.100000,
+                freq = 869.525000,
                 rfch = 0,
                 modu = "LORA",
                 datr = "SF12BW125",
-                codr = "4/6",
+                codr = "4/5",
                 powe = 14
+
+            };
+        }
+
+        public DownlinkPktFwdMessage(string _data,string _datr,uint _rfch,double _freq, long _tmst)
+        {
+            var byteData = Convert.FromBase64String(_data);
+            txpk = new Txpk()
+            {
+                imme = false,
+                tmst = _tmst + 5000000,
+                data = _data,
+                size = (uint)byteData.Length,
+                freq = _freq,
+                rfch = _rfch,
+                modu = "LORA",
+                datr = _datr,
+                codr = "4/5",
+                powe = 14,
+                ipol = true
 
             };
         }

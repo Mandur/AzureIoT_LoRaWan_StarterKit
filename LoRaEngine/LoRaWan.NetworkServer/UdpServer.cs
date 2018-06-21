@@ -51,7 +51,8 @@ namespace LoRaWan.NetworkServer
         {
 
 
-            await udpClient.SendAsync(messageToSend, messageToSend.Length,remoteLoRaAggregatorIp.ToString(), remoteLoRaAggregatorPort);
+            if(messageToSend.Length!=0)
+                await udpClient.SendAsync(messageToSend, messageToSend.Length,remoteLoRaAggregatorIp.ToString(), remoteLoRaAggregatorPort);
 
         }
 

@@ -266,5 +266,29 @@ namespace LoRaWanTest
             );
         }
 
+        [Fact]
+        public void test()
+        {
+            string jsonUplink = @"{ ""rxpk"":[
+ 	            {
+		            ""time"":""2013-03-31T16:21:17.528002Z"",
+ 		            ""tmst"":3512348611,
+ 		            ""chan"":2,
+ 		            ""rfch"":0,
+ 		            ""freq"":866.349812,
+ 		            ""stat"":1,
+ 		            ""modu"":""LORA"",
+ 		            ""datr"":""SF7BW125"",
+ 		            ""codr"":""4/6"",
+ 		            ""rssi"":-35,
+ 		            ""lsnr"":5.1,
+ 		            ""size"":32,
+ 		            ""data"":""IBMeputKQRfOUiGYyaskCt4=""
+                }]}";
+            var joinRequestInput = Encoding.Default.GetBytes(jsonUplink);
+            LoRaMessage joinRequestMessage = new LoRaMessage(joinRequestInput.Concat(joinRequestInput).ToArray());
+
+        }
+
     }
 }

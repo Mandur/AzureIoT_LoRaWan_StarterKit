@@ -10,7 +10,7 @@ namespace LoRaWan.NetworkServer
 {
     public class MessageProcessor : IDisposable
     {
-        string testKey = "2B7E151628AED2A6ABF7158809CF4F3C";
+        string testKey = "8AFE71A145B253E49C3031AD068277A1";
         string testDeviceId = "BE7A00000000888F";
         const int HubRetryCount = 10;
         IoTHubSender sender = null;
@@ -36,7 +36,10 @@ namespace LoRaWan.NetworkServer
                     Random rnd = new Random();
                     byte[] appNonce = new byte[3];
                     byte[] netId = new byte[3] { 0,0,0};
-                    byte[] devAddr = new byte[4] { 0,0,0,0};
+                    byte[] devAddr = new byte[4] { 0,0,0,1};
+                    netId = StringToByteArray("000024");
+                    devAddr = StringToByteArray("4917E265");
+                    
                     rnd.NextBytes(appNonce);
                     LoRaPayloadJoinAccept loRaPayloadJoinAccept = new LoRaPayloadJoinAccept(
                         //NETID 0 / 1 is default test 
@@ -47,17 +50,25 @@ namespace LoRaWan.NetworkServer
                         devAddr ,
                         appNonce
                         );
-                  
-                    LoRaMessage joinAcceptMessage = new LoRaMessage(loRaPayloadJoinAccept, LoRaMessageType.JoinAccept, loraMessage.physicalPayload.token);
-                  
+                    var _datr = ((UplinkPktFwdMessage)loraMessage.loraMetadata.fullPayload).rxpk[0].datr;
+                    uint _rfch= ((UplinkPktFwdMessage)loraMessage.loraMetadata.fullPayload).rxpk[0].rfch;
+                    double _freq= ((UplinkPktFwdMessage)loraMessage.loraMetadata.fullPayload).rxpk[0].freq;
+                    long _tmst = ((UplinkPktFwdMessage)loraMessage.loraMetadata.fullPayload).rxpk[0].tmst;
+                    LoRaMessage joinAcceptMessage = new LoRaMessage(loRaPayloadJoinAccept, LoRaMessageType.JoinAccept, loraMessage.physicalPayload.token
+                        ,_datr,0, _freq, _tmst);
                     messageToSend =joinAcceptMessage.physicalPayload.GetMessage();
+
                     Console.WriteLine("Join Accept sent");
+                    Console.WriteLine(BitConverter.ToString(messageToSend));
 
                 }else if (loraMessage.loRaMessageType == LoRaMessageType.JoinAccept)
                 {
                     Console.WriteLine("join accept message received");
+                    Console.WriteLine(BitConverter.ToString(message));
+
+                    //loraMessage.payloadMessage.devAddr;
                 }
-               //normal message
+                //normal message
                 else
                 {
                     Console.WriteLine($"Processing message from device: {BitConverter.ToString(loraMessage.payloadMessage.devAddr)}");
