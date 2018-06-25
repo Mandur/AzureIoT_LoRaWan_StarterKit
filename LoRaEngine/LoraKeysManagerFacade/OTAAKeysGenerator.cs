@@ -18,17 +18,6 @@ namespace LoraKeysManagerFacade
         }
 
 
-
-
-
-
-
-
-
-
-
-
-
         public static string getDevAddr(Byte[] netId)
         {
             int nwkPart = (netId[2] << 1);
@@ -46,10 +35,6 @@ namespace LoraKeysManagerFacade
         //don't work with CFLIST atm
         public static string calculateKey(byte[] type, byte[] appnonce, byte[] netid, byte[] devnonce, byte[] appKey)
         {
-
-            Array.Reverse(appnonce);
-            Array.Reverse(netid);
-            Array.Reverse(devnonce);
 
             Aes aes = new AesManaged();
             aes.Key = appKey;

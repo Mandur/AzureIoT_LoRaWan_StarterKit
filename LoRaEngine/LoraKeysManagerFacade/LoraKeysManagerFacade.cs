@@ -255,16 +255,20 @@ namespace LoraKeysManagerFacade
 
                     AppNounce = OTAAKeysGenerator.getAppNonce();
 
-                    AppSKey = OTAAKeysGenerator.calculateKey( new byte[1]{0x02}, OTAAKeysGenerator.StringToByteArray(AppNounce), netId, OTAAKeysGenerator.StringToByteArray(DevNounce), OTAAKeysGenerator.StringToByteArray(AppKey));
+                    AppSKey = OTAAKeysGenerator.calculateKey( new byte[1]{ 0x02 }, OTAAKeysGenerator.StringToByteArray(AppNounce), netId, OTAAKeysGenerator.StringToByteArray(DevNounce), OTAAKeysGenerator.StringToByteArray(AppKey));
                     NwkSKey = OTAAKeysGenerator.calculateKey(new byte[1] { 0x01 }, OTAAKeysGenerator.StringToByteArray(AppNounce), netId, OTAAKeysGenerator.StringToByteArray(DevNounce), OTAAKeysGenerator.StringToByteArray(AppKey)); ;
-                    Array.Reverse(netId);
-                    //check that the devaddr is unique in the IoTHub registry
 
+                   
+                    
+                    //check that the devaddr is unique in the IoTHub registry
                     bool isDevAddrUnique = false;
                     
                     do
                     {
                         DevAddr = OTAAKeysGenerator.getDevAddr(netId);
+
+                      
+
                         var query = registryManager.CreateQuery($"SELECT * FROM devices WHERE tags.DevAddr = '{DevAddr}'", 1);
                         if (query.HasMoreResults)
                         {

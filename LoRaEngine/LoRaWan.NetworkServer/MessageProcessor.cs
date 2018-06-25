@@ -187,12 +187,16 @@ namespace LoRaWan.NetworkServer
 
                 byte[] appNonce = StringToByteArray(joinLoraDeviceInfo.AppNounce);
 
-                byte[] netId = StringToByteArray(joinLoraDeviceInfo.NetId); ;
+                byte[] netId = StringToByteArray(joinLoraDeviceInfo.NetId);
+
+               
 
                 byte[] devAddr = StringToByteArray(joinLoraDeviceInfo.DevAddr);
 
                 string appKey = joinLoraDeviceInfo.AppKey;
 
+                Array.Reverse(netId);
+                Array.Reverse(appNonce);
 
                 LoRaPayloadJoinAccept loRaPayloadJoinAccept = new LoRaPayloadJoinAccept(
                     //NETID 0 / 1 is default test 
