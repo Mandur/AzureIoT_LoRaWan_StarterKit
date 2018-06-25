@@ -251,15 +251,13 @@ namespace LoraKeysManagerFacade
                     }
 
                 
-                    byte[] netId = OTAAKeysGenerator.StringToByteArray("000001");
-
-
+                    byte[] netId = new byte[3] { 0, 0, 1 };
 
                     AppNounce = OTAAKeysGenerator.getAppNonce();
 
                     AppSKey = OTAAKeysGenerator.calculateKey( new byte[1]{0x02}, OTAAKeysGenerator.StringToByteArray(AppNounce), netId, OTAAKeysGenerator.StringToByteArray(DevNounce), OTAAKeysGenerator.StringToByteArray(AppKey));
                     NwkSKey = OTAAKeysGenerator.calculateKey(new byte[1] { 0x01 }, OTAAKeysGenerator.StringToByteArray(AppNounce), netId, OTAAKeysGenerator.StringToByteArray(DevNounce), OTAAKeysGenerator.StringToByteArray(AppKey)); ;
-
+                    Array.Reverse(netId);
                     //check that the devaddr is unique in the IoTHub registry
 
                     bool isDevAddrUnique = false;
