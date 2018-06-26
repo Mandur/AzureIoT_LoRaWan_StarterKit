@@ -61,9 +61,16 @@ namespace LoRaWan.NetworkServer
                         
                 }
 
-                MessageProcessor messageProcessor = new MessageProcessor();
-                await messageProcessor.processMessage(receivedResults.Buffer);
-               
+
+                try
+                {
+                    MessageProcessor messageProcessor = new MessageProcessor();
+                    await messageProcessor.processMessage(receivedResults.Buffer);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error processing the message {ex.Message}");
+                }
                    
             }
            
