@@ -28,9 +28,9 @@
         "storageAccountName": "[concat(parameters('uniqueSolutionPrefix'), 'storage')]",
         "storageAccountType": "Standard_LRS",
         "functionAppName": "[concat(parameters('uniqueSolutionPrefix'), 'function')]",
-        "gitUsername": "Skraelinger",
+        "gitUsername": "mandur",
         "gitRepoUrl": "[concat('https://github.com/',variables('gitUsername'),'/AzureIoT_LoRaWan_StarterKit.git')]",
-        "gitBranch": "master",
+        "gitBranch": "maccommand",
         "storageAccountId": "[concat(resourceGroup().id, '/providers/', 'Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
         "iotHubOwnerPolicyName": "iothubowner",
         "appInsightName":"[concat(parameters('uniqueSolutionPrefix'), 'insight')]"
