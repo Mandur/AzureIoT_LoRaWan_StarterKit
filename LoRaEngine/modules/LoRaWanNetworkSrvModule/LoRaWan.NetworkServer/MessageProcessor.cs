@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 //
 using LoRaTools;
+using LoRaTools.Regions;
 using Microsoft.Azure.Devices.Client;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -161,7 +162,12 @@ namespace LoRaWan.NetworkServer
 
                             
                             dynamic fullPayload = JObject.FromObject(rxPk);
-                         
+
+                            //Set specific region
+                            if (RegionFactory.CurrentRegion == null)
+                            {
+                                RegionFactory.Create(rxPk);
+                            }
 
                             string jsonDataPayload = "";
 
@@ -226,6 +232,7 @@ namespace LoRaWan.NetworkServer
 
                         byte[] bytesC2dMsg = null;
                         byte[] fport = null;
+                        //Todo revamp fctrl
                         byte[] fctrl = new byte[1] { 32 };
 
                         //check if we got a c2d message to be added in the ack message and preprare the message
@@ -294,9 +301,8 @@ namespace LoRaWan.NetworkServer
                                     {
                                         Logger.Log(loraDeviceInfo.DevEUI, $"using standard second receive windows", Logger.LoggingLevel.Info);
 
-                                        //using EU fix DR for RX2
-                                        _freq = 869.525;
-                                        _datr = "SF12BW125";
+                                        _freq = RegionFactory.CurrentRegion.RX2DefaultReceiveWindows.frequency;
+                                        _datr = RegionFactory.CurrentRegion.DRtoConfiguration[RegionFactory.CurrentRegion.RX2DefaultReceiveWindows.dr].configuration;
 
 
                                     }
